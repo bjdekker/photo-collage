@@ -17,9 +17,11 @@ export default function App() {
   const [settings, setSettings]       = useState<CollageSettings>(DEFAULT_SETTINGS);
   const [placements, setPlacements]   = useState<Placement[]>([]);
   const [unplacedCount, setUnplacedCount] = useState(0);
+  const [layoutRevision, setLayoutRevision] = useState(0);
 
   const applyLayout = useCallback(
     (currentPhotos: Photo[], currentSettings: CollageSettings) => {
+      setLayoutRevision(r => r + 1);
       if (currentPhotos.length === 0) {
         setPlacements([]);
         setUnplacedCount(0);
@@ -84,7 +86,21 @@ export default function App() {
     setPhotos([]);
     setPlacements([]);
     setUnplacedCount(0);
+    setLayoutRevision(r => r + 1);
   }, [photos]);
+
+  const handleSwapPhotos = useCallback((id1: string, id2: string) => {
+    setPlacements(prev => {
+      const next = [...prev];
+      const i1 = next.findIndex(p => p.photo.id === id1);
+      const i2 = next.findIndex(p => p.photo.id === id2);
+      if (i1 === -1 || i2 === -1) return prev;
+      const p1 = next[i1].photo;
+      next[i1] = { ...next[i1], photo: next[i2].photo };
+      next[i2] = { ...next[i2], photo: p1 };
+      return next;
+    });
+  }, []);
 
   return (
     <div className="app">
@@ -92,24 +108,12 @@ export default function App() {
         <h1 className="app-title">Photo Collage Generator</h1>
       </header>
 
-      <ControlPanel
-        settings={settings}
-        onSettingsChange={handleSettingsChange}
-        onRegenerate={handleRegenerate}
-        onClearAll={handleClearAll}
-        onPhotosAdded={handlePhotosAdded}
-        hasPhotos={photos.length > 0}
-        photoCount={photos.length}
-        unplacedCount={unplacedCount}
-      />
+      <ControlPanel settings={settings} onSettingsChange={handleSettingsChange}
+        onRegenerate={handleRegenerate} onClearAll={handleClearAll} onPhotosAdded={handlePhotosAdded}
+        hasPhotos={photos.length > 0} photoCount={photos.length} unplacedCount={unplacedCount} />
 
-      <CollageCanvas
-        placements={placements}
-        settings={settings}
-        onPhotosAdded={handlePhotosAdded}
-        onRemovePhoto={handleRemovePhoto}
-        hasPhotos={photos.length > 0}
-      />
+      <CollageCanvas placements={placements} settings={settings} layoutRevision={layoutRevision} onPhotosAdded={handlePhotosAdded}
+        onRemovePhoto={handleRemovePhoto} onSwapPhotos={handleSwapPhotos} hasPhotos={photos.length > 0} />
     </div>
   );
 }

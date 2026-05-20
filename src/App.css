@@ -177,6 +177,7 @@
   overflow: hidden;
   flex-shrink: 0;
   transition: box-shadow 0.2s;
+  user-select: none;
 }
 
 .collage-canvas--dragging {
@@ -227,17 +228,63 @@
 }
 
 .photo-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
   display: block;
-  pointer-events: none;
-  transition: transform 0.25s ease;
+  /* width, height, left, top are set via JS for manual pan positioning */
 }
 
-.photo-box:hover img {
-  transform: scale(1.04);
+/* ─── Swap selection ──────────────────────────────────────────────────────── */
+
+.photo-box--selected {
+  outline: 3px solid #6366f1;
+  outline-offset: -3px;
+  z-index: 2;
 }
+
+.photo-box--swap-target {
+  outline: 2px dashed rgba(99, 102, 241, 0.5);
+  outline-offset: -2px;
+}
+
+.photo-box--swap-target:hover {
+  outline: 2px solid #6366f1;
+}
+
+/* ─── Selection overlay ──────────────────────────────────────────────────── */
+
+.photo-box__selection-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(99, 102, 241, 0.35);
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* ─── Pan direction hints ────────────────────────────────────────────────── */
+
+.pan-hint {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.52);
+  color: #fff;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 8;
+}
+
+.photo-box:hover .pan-hint { opacity: 1; }
+
+.pan-hint--left   { left: 5px;   top: 50%; transform: translateY(-50%); }
+.pan-hint--right  { right: 5px;  top: 50%; transform: translateY(-50%); }
+.pan-hint--top    { top: 5px;    left: 50%; transform: translateX(-50%); }
+.pan-hint--bottom { bottom: 5px; left: 50%; transform: translateX(-50%); }
 
 /* Remove button – hidden until hover */
 .remove-btn {
