@@ -23,3 +23,6 @@ export interface LayoutResult {
   placements: Placement[];
   unplaced: Photo[];
 }
+
+export interface PhotoOffset { x: number; y: number }
+export interface PhotoNatSize { w: number; h: number }

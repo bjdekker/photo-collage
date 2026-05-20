@@ -152,6 +152,38 @@
   background: #dc2626;
 }
 
+.btn-export {
+  background: #10b981;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.35);
+  padding: 7px 12px;
+}
+
+.btn-export:hover:not(:disabled) {
+  background: #059669;
+}
+
+/* ─── Export group ────────────────────────────────────────────────────────── */
+
+.export-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 12px;
+  border-left: 1px solid #e2e8f0;
+  margin-left: 4px;
+}
+
+.export-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
 /* ─── Canvas scroll area ─────────────────────────────────────────────────── */
 
 .canvas-scroll-area {

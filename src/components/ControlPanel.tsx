@@ -8,20 +8,18 @@ interface ControlPanelProps {
   onRegenerate: () => void;
   onClearAll: () => void;
   onPhotosAdded: (files: File[]) => void;
+  onExportJpeg: () => void;
+  onExportPng: () => void;
+  onExportSvg: () => void;
   hasPhotos: boolean;
   photoCount: number;
   unplacedCount: number;
 }
 
 export default function ControlPanel({
-  settings,
-  onSettingsChange,
-  onRegenerate,
-  onClearAll,
-  onPhotosAdded,
-  hasPhotos,
-  photoCount,
-  unplacedCount,
+  settings, onSettingsChange, onRegenerate, onClearAll, onPhotosAdded,
+  onExportJpeg, onExportPng, onExportSvg,
+  hasPhotos, photoCount, unplacedCount,
 }: ControlPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +77,13 @@ export default function ControlPanel({
           title="Generate a new random arrangement">↻ Regenerate</button>
 
         <button className="btn btn-danger" onClick={onClearAll} disabled={!hasPhotos}>Clear All</button>
+
+        <div className="export-group">
+          <span className="export-label">Export</span>
+          <button className="btn btn-export" onClick={onExportJpeg} disabled={!hasPhotos} title="Download as JPEG (lossless quality)">JPG</button>
+          <button className="btn btn-export" onClick={onExportPng}  disabled={!hasPhotos} title="Download as PNG">PNG</button>
+          <button className="btn btn-export" onClick={onExportSvg}  disabled={!hasPhotos} title="Download as Inkscape SVG (images must be in the same folder)">SVG</button>
+        </div>
 
         <span className="photo-count">
           {photoCount} photo{photoCount !== 1 ? 's' : ''}

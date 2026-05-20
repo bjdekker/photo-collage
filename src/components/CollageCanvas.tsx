@@ -1,6 +1,11 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import type { DragEvent as RDE, MouseEvent as RME, CSSProperties } from 'react';
-import type { Placement, CollageSettings } from '../types';
+import type { Placement, CollageSettings, PhotoOffset, PhotoNatSize } from '../types';
+
+export interface CollageCanvasHandle {
+  getOffsets(): Map<string, PhotoOffset>;
+  getNatSizes(): Map<string, PhotoNatSize>;
+}
 
 interface Props {
   placements: Placement[];
@@ -12,8 +17,6 @@ interface Props {
   hasPhotos: boolean;
 }
 
-interface Offset { x: number; y: number }
-interface NatSize { w: number; h: number }
 interface PanDrag {
   photoId: string; startMX: number; startMY: number;
   startOX: number; startOY: number; maxPX: number; maxPY: number; didMove: boolean;
@@ -21,7 +24,7 @@ interface PanDrag {
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 
-function computePanInfo(fw: number, fh: number, nat: NatSize | undefined, off: Offset) {
+function computePanInfo(fw: number, fh: number, nat: PhotoNatSize | undefined, off: PhotoOffset) {
   if (!nat || nat.w === 0 || nat.h === 0) return { imgW: fw, imgH: fh, imgLeft: 0, imgTop: 0, maxPX: 0, maxPY: 0 };
   const s = Math.max(fw / nat.w, fh / nat.h);
   const iw = nat.w * s; const ih = nat.h * s;
@@ -30,17 +33,25 @@ function computePanInfo(fw: number, fh: number, nat: NatSize | undefined, off: O
     imgLeft: (fw - iw) / 2 + clamp(off.x, -mpx, mpx), imgTop: (fh - ih) / 2 + clamp(off.y, -mpy, mpy) };
 }
 
-export default function CollageCanvas({ placements, settings, layoutRevision, onPhotosAdded, onRemovePhoto, onSwapPhotos, hasPhotos }: Props) {
+const CollageCanvas = forwardRef<CollageCanvasHandle, Props>(function CollageCanvas(
+  { placements, settings, layoutRevision, onPhotosAdded, onRemovePhoto, onSwapPhotos, hasPhotos }, ref,
+) {
   const [isDropping, setIsDropping] = useState(false);
   const dropCounter = useRef(0);
-  const [offsets, setOffsets] = useState<Map<string, Offset>>(new Map());
-  const [natSizes, setNatSizes] = useState<Map<string, NatSize>>(new Map());
+  const [offsets, setOffsets] = useState<Map<string, PhotoOffset>>(new Map());
+  const [natSizes, setNatSizes] = useState<Map<string, PhotoNatSize>>(new Map());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const panDrag = useRef<PanDrag | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   const onSwapRef = useRef(onSwapPhotos);
   useEffect(() => { onSwapRef.current = onSwapPhotos; }, [onSwapPhotos]);
+
+  // Expose current offsets and natSizes to the parent for export
+  useImperativeHandle(ref, () => ({
+    getOffsets: () => offsets,
+    getNatSizes: () => natSizes,
+  }), [offsets, natSizes]);
 
   // Full reset on regenerate / settings change / add photos — NOT on swap
   useEffect(() => { setOffsets(new Map()); setSelectedId(null); selectedIdRef.current = null; }, [layoutRevision]);
@@ -181,4 +192,6 @@ export default function CollageCanvas({ placements, settings, layoutRevision, on
       </div>
     </div>
   );
-}
+});
+
+export default CollageCanvas;

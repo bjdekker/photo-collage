@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/types.ts","./src/components/collagecanvas.tsx","./src/components/controlpanel.tsx","./src/utils/layoutalgorithm.ts"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/main.tsx","./src/types.ts","./src/components/collagecanvas.tsx","./src/components/controlpanel.tsx","./src/utils/exportcollage.ts","./src/utils/layoutalgorithm.ts"],"version":"5.9.3"}

@@ -1,7 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import ControlPanel from './components/ControlPanel';
 import CollageCanvas from './components/CollageCanvas';
+import type { CollageCanvasHandle } from './components/CollageCanvas';
 import { generateLayout } from './utils/layoutAlgorithm';
+import { exportAsJpeg, exportAsPng, exportAsSvg } from './utils/exportCollage';
 import type { Photo, CollageSettings, Placement } from './types';
 import './App.css';
 
@@ -18,6 +20,7 @@ export default function App() {
   const [placements, setPlacements]   = useState<Placement[]>([]);
   const [unplacedCount, setUnplacedCount] = useState(0);
   const [layoutRevision, setLayoutRevision] = useState(0);
+  const canvasRef = useRef<CollageCanvasHandle>(null);
 
   const applyLayout = useCallback(
     (currentPhotos: Photo[], currentSettings: CollageSettings) => {
@@ -102,6 +105,21 @@ export default function App() {
     });
   }, []);
 
+  const handleExportJpeg = useCallback(() => {
+    if (!canvasRef.current || placements.length === 0) return;
+    exportAsJpeg(placements, settings, canvasRef.current.getOffsets(), canvasRef.current.getNatSizes()).catch(console.error);
+  }, [placements, settings]);
+
+  const handleExportPng = useCallback(() => {
+    if (!canvasRef.current || placements.length === 0) return;
+    exportAsPng(placements, settings, canvasRef.current.getOffsets(), canvasRef.current.getNatSizes()).catch(console.error);
+  }, [placements, settings]);
+
+  const handleExportSvg = useCallback(() => {
+    if (!canvasRef.current || placements.length === 0) return;
+    exportAsSvg(placements, settings, canvasRef.current.getOffsets(), canvasRef.current.getNatSizes());
+  }, [placements, settings]);
+
   return (
     <div className="app">
       <header className="app-header">
@@ -110,9 +128,10 @@ export default function App() {
 
       <ControlPanel settings={settings} onSettingsChange={handleSettingsChange}
         onRegenerate={handleRegenerate} onClearAll={handleClearAll} onPhotosAdded={handlePhotosAdded}
+        onExportJpeg={handleExportJpeg} onExportPng={handleExportPng} onExportSvg={handleExportSvg}
         hasPhotos={photos.length > 0} photoCount={photos.length} unplacedCount={unplacedCount} />
 
-      <CollageCanvas placements={placements} settings={settings} layoutRevision={layoutRevision} onPhotosAdded={handlePhotosAdded}
+      <CollageCanvas ref={canvasRef} placements={placements} settings={settings} layoutRevision={layoutRevision} onPhotosAdded={handlePhotosAdded}
         onRemovePhoto={handleRemovePhoto} onSwapPhotos={handleSwapPhotos} hasPhotos={photos.length > 0} />
     </div>
   );
