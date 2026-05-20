@@ -10,6 +10,7 @@ export interface CollageCanvasHandle {
 interface Props {
   placements: Placement[];
   settings: CollageSettings;
+  displayScale: number;
   layoutRevision: number;
   onPhotosAdded: (files: File[]) => void;
   onRemovePhoto: (id: string) => void;
@@ -34,7 +35,7 @@ function computePanInfo(fw: number, fh: number, nat: PhotoNatSize | undefined, o
 }
 
 const CollageCanvas = forwardRef<CollageCanvasHandle, Props>(function CollageCanvas(
-  { placements, settings, layoutRevision, onPhotosAdded, onRemovePhoto, onSwapPhotos, hasPhotos }, ref,
+  { placements, settings, displayScale, layoutRevision, onPhotosAdded, onRemovePhoto, onSwapPhotos, hasPhotos }, ref,
 ) {
   const [isDropping, setIsDropping] = useState(false);
   const dropCounter = useRef(0);
@@ -125,7 +126,8 @@ const CollageCanvas = forwardRef<CollageCanvasHandle, Props>(function CollageCan
   const { width, height } = settings;
   return (
     <div className="canvas-scroll-area">
-      <div className={`collage-canvas${isDropping ? ' collage-canvas--dragging' : ''}`} style={{ width, height }}
+      <div className={`collage-canvas${isDropping ? ' collage-canvas--dragging' : ''}`}
+        style={{ width, height, transform: `scale(${displayScale})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
         onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={handleDrop}>
         {!hasPhotos && !isDropping && (
           <div className="empty-state">

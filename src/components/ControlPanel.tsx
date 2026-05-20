@@ -24,12 +24,10 @@ export default function ControlPanel({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleNumberChange =
-    (field: keyof CollageSettings, min: number, max: number) =>
+    (field: keyof CollageSettings) =>
     (e: ChangeEvent<HTMLInputElement>) => {
-      const value = parseInt(e.target.value, 10);
-      if (!isNaN(value) && value >= min && value <= max) {
-        onSettingsChange({ ...settings, [field]: value });
-      }
+      const value = parseInt(e.target.value, 10) || 0;
+      onSettingsChange({ ...settings, [field]: value });
     };
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
@@ -47,25 +45,25 @@ export default function ControlPanel({
         <label className="field-label">
           <span>Width (px)</span>
           <input type="number" className="field-input" value={settings.width}
-            onChange={handleNumberChange('width', 100, 5000)} min="100" max="5000" step="10" />
+            onChange={handleNumberChange('width')} />
         </label>
 
         <label className="field-label">
           <span>Height (px)</span>
           <input type="number" className="field-input" value={settings.height}
-            onChange={handleNumberChange('height', 100, 5000)} min="100" max="5000" step="10" />
+            onChange={handleNumberChange('height')} />
         </label>
 
         <label className="field-label">
           <span>Margin (px)</span>
           <input type="number" className="field-input" value={settings.margin}
-            onChange={handleNumberChange('margin', 0, 200)} min="0" max="200" />
+            onChange={handleNumberChange('margin')} />
         </label>
 
         <label className="field-label">
           <span>Gap (px)</span>
           <input type="number" className="field-input" value={settings.gap}
-            onChange={handleNumberChange('gap', 0, 100)} min="0" max="100" />
+            onChange={handleNumberChange('gap')} />
         </label>
       </div>
 
