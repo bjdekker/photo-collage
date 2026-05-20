@@ -1,0 +1,307 @@
+/* ─── Layout ─────────────────────────────────────────────────────────────── */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.app-header {
+  background: #1e293b;
+  padding: 14px 24px;
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Control panel ───────────────────────────────────────────────────────── */
+
+.control-panel {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.control-fields {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: default;
+}
+
+.field-input {
+  width: 90px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.field-input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  background: #fff;
+}
+
+/* Hide browser spin arrows for cleaner look */
+.field-input::-webkit-inner-spin-button,
+.field-input::-webkit-outer-spin-button {
+  opacity: 0.5;
+}
+
+.control-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.photo-count {
+  font-size: 0.85rem;
+  color: #64748b;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.unplaced-warning {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 16px;
+  border: none;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #6366f1;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.35);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.btn-secondary {
+  background: #0ea5e9;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(14, 165, 233, 0.35);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #0284c7;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.35);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+/* ─── Canvas scroll area ─────────────────────────────────────────────────── */
+
+.canvas-scroll-area {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 24px;
+  background: #f1f5f9;
+}
+
+/* ─── Collage canvas ──────────────────────────────────────────────────────── */
+
+.collage-canvas {
+  position: relative;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -2px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: box-shadow 0.2s;
+}
+
+.collage-canvas--dragging {
+  box-shadow:
+    0 0 0 3px #6366f1,
+    0 8px 24px -4px rgba(99, 102, 241, 0.4);
+}
+
+/* ─── Empty state ─────────────────────────────────────────────────────────── */
+
+.empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.empty-icon {
+  font-size: 3.5rem;
+  line-height: 1;
+  filter: grayscale(0.3);
+}
+
+.empty-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.empty-sub {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  text-align: center;
+  max-width: 260px;
+}
+
+/* ─── Photo boxes ─────────────────────────────────────────────────────────── */
+
+.photo-box {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+.photo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  transition: transform 0.25s ease;
+}
+
+.photo-box:hover img {
+  transform: scale(1.04);
+}
+
+/* Remove button – hidden until hover */
+.remove-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 1.1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 10;
+  padding: 0;
+}
+
+.photo-box:hover .remove-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.remove-btn:hover {
+  background: rgba(239, 68, 68, 0.9);
+}
+
+/* ─── Drop overlay ────────────────────────────────────────────────────────── */
+
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(99, 102, 241, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.drop-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 2.5px dashed #6366f1;
+  border-radius: 12px;
+  padding: 24px 40px;
+  color: #4f46e5;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.drop-icon {
+  font-size: 2.5rem;
+  font-weight: 300;
+  line-height: 1;
+  color: #6366f1;
+}
