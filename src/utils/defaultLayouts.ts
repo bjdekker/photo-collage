@@ -15,6 +15,17 @@ export const DEFAULT_LAYOUTS: DefaultLayout[] = [
       { x: 2734, y: 534, width: 1067, height: 1600 },   // Right frame
     ],
   },
+  {
+    id: 'square',
+    name: 'Square',
+    description: 'Single centered square frame, perfect for a hero portrait',
+    width: 4000,
+    height: 2667,
+    frames: [
+      // 2667×2667 square centred on the 4000×2667 canvas: (4000-2667)/2 = 666.5 → 667
+      { x: 667, y: 0, width: 2667, height: 2667 },
+    ],
+  },
 ];
 
 export function getDefaultLayoutById(id: string): DefaultLayout | undefined {
@@ -75,7 +86,8 @@ export function applyDefaultLayout(
     const nat = natSizes.get(photo.id);
 
     // Determine if photo is landscape and should be rotated
-    const isLandscape = nat && nat.w >= nat.h;
+    // Only rotate if strictly wider than tall, not for square images
+    const isLandscape = nat && nat.w > nat.h;
     const rotation = isLandscape ? 90 : 0;
 
     placements.push({
