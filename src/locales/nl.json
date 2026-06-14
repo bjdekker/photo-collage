@@ -1,0 +1,30 @@
+{
+  "layoutMode": "Indelingsmodus:",
+  "generated": "Gegenereerd",
+  "presets": "Voorinstellingen",
+  "layout": "Indeling",
+  "width": "Breedte (px)",
+  "height": "Hoogte (px)",
+  "margin": "Marge (px)",
+  "gap": "Tussenruimte (px)",
+  "addPhotos": "Foto's toevoegen",
+  "regenerate": "↻ Opnieuw genereren",
+  "regenerateTooltip": "Een nieuwe willekeurige opstelling genereren",
+  "regenerateDisabledTooltip": "Opnieuw genereren is niet beschikbaar voor vooringestelde indelingen",
+  "clearAll": "Alles wissen",
+  "export": "Exporteren",
+  "exportJpg": "JPG",
+  "exportPng": "PNG",
+  "exportSvg": "SVG",
+  "exportJpgTooltip": "Download als JPEG (verliesloze kwaliteit)",
+  "exportPngTooltip": "Download als PNG",
+  "exportSvgTooltip": "Download als Inkscape SVG (afbeeldingen moeten in dezelfde map staan)",
+  "photo_one": "{{count}} foto",
+  "photo_other": "{{count}} foto's",
+  "didntFit": "paste niet",
+  "spacingWarning": "Vergroot canvasgrootte of verminder aantal foto's",
+  "layouts": {
+    "instaStrip": "Insta Strip",
+    "square": "Vierkant"
+  }
+}

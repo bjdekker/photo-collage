@@ -3,7 +3,7 @@ import type { DefaultLayout, Placement, Photo, PhotoNatSize } from '../types';
 export const DEFAULT_LAYOUTS: DefaultLayout[] = [
   {
     id: 'insta-strip',
-    name: 'Insta Strip',
+    name: 'instaStrip',
     description: 'Three portrait frames in a vertical column, perfect for Instagram stories',
     width: 4000,
     height: 2667,
@@ -17,7 +17,7 @@ export const DEFAULT_LAYOUTS: DefaultLayout[] = [
   },
   {
     id: 'square',
-    name: 'Square',
+    name: 'square',
     description: 'Single centered square frame, perfect for a hero portrait',
     width: 4000,
     height: 2667,

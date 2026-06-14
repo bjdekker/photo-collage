@@ -1,0 +1,30 @@
+{
+  "layoutMode": "Layout Mode:",
+  "generated": "Generated",
+  "presets": "Presets",
+  "layout": "Layout",
+  "width": "Width (px)",
+  "height": "Height (px)",
+  "margin": "Margin (px)",
+  "gap": "Gap (px)",
+  "addPhotos": "Add Photos",
+  "regenerate": "↻ Regenerate",
+  "regenerateTooltip": "Generate a new random arrangement",
+  "regenerateDisabledTooltip": "Regenerate not available for preset layouts",
+  "clearAll": "Clear All",
+  "export": "Export",
+  "exportJpg": "JPG",
+  "exportPng": "PNG",
+  "exportSvg": "SVG",
+  "exportJpgTooltip": "Download as JPEG (lossless quality)",
+  "exportPngTooltip": "Download as PNG",
+  "exportSvgTooltip": "Download as Inkscape SVG (images must be in the same folder)",
+  "photo_one": "{{count}} photo",
+  "photo_other": "{{count}} photos",
+  "didntFit": "didn't fit",
+  "spacingWarning": "Increase canvas size or reduce photo count",
+  "layouts": {
+    "instaStrip": "Insta Strip",
+    "square": "Square"
+  }
+}

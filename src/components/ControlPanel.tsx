@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ChangeEvent } from 'react';
 import type { CollageSettings, DefaultLayout } from '../types';
 
@@ -27,6 +28,7 @@ export default function ControlPanel({
   hasPhotos, photoCount, unplacedCount,
   layoutMode, onLayoutModeChange, defaultLayouts, selectedDefaultLayout, onDefaultLayoutChange,
 }: ControlPanelProps) {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleNumberChange =
@@ -51,18 +53,18 @@ export default function ControlPanel({
     <div className="control-panel">
       {/* Layout mode selector */}
       <div className="layout-mode-selector">
-        <label className="mode-label">Layout Mode:</label>
+        <label className="mode-label">{t('layoutMode')}</label>
         <button
           className={`mode-btn ${layoutMode === 'generated' ? 'mode-btn--active' : ''}`}
           onClick={() => onLayoutModeChange('generated')}
         >
-          Generated
+          {t('generated')}
         </button>
         <button
           className={`mode-btn ${layoutMode === 'default' ? 'mode-btn--active' : ''}`}
           onClick={() => onLayoutModeChange('default')}
         >
-          Presets
+          {t('presets')}
         </button>
       </div>
 
@@ -70,7 +72,7 @@ export default function ControlPanel({
       {isDefaultMode && (
         <div className="default-layout-selector">
           <label className="field-label">
-            <span>Layout</span>
+            <span>{t('layout')}</span>
             <select
               className="field-input"
               value={selectedDefaultLayout}
@@ -78,7 +80,7 @@ export default function ControlPanel({
             >
               {defaultLayouts.map(layout => (
                 <option key={layout.id} value={layout.id}>
-                  {layout.name}
+                  {t(`layouts.${layout.name}`)}
                 </option>
               ))}
             </select>
@@ -90,25 +92,25 @@ export default function ControlPanel({
       {!isDefaultMode && (
         <div className="control-fields">
           <label className="field-label">
-            <span>Width (px)</span>
+            <span>{t('width')}</span>
             <input type="number" className="field-input" value={settings.width}
               onChange={handleNumberChange('width')} />
           </label>
 
           <label className="field-label">
-            <span>Height (px)</span>
+            <span>{t('height')}</span>
             <input type="number" className="field-input" value={settings.height}
               onChange={handleNumberChange('height')} />
           </label>
 
           <label className="field-label">
-            <span>Margin (px)</span>
+            <span>{t('margin')}</span>
             <input type="number" className="field-input" value={settings.margin}
               onChange={handleNumberChange('margin')} />
           </label>
 
           <label className="field-label">
-            <span>Gap (px)</span>
+            <span>{t('gap')}</span>
             <input type="number" className="field-input" value={settings.gap}
               onChange={handleNumberChange('gap')} />
           </label>
@@ -117,25 +119,25 @@ export default function ControlPanel({
 
       <div className="control-actions">
         <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFileSelect} />
-        <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()}>Add Photos</button>
+        <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()}>{t('addPhotos')}</button>
 
         <button className="btn btn-secondary" onClick={onRegenerate} disabled={!hasPhotos || isDefaultMode}
-          title={isDefaultMode ? "Regenerate not available for preset layouts" : "Generate a new random arrangement"}>↻ Regenerate</button>
+          title={isDefaultMode ? t('regenerateDisabledTooltip') : t('regenerateTooltip')}>{t('regenerate')}</button>
 
-        <button className="btn btn-danger" onClick={onClearAll} disabled={!hasPhotos}>Clear All</button>
+        <button className="btn btn-danger" onClick={onClearAll} disabled={!hasPhotos}>{t('clearAll')}</button>
 
         <div className="export-group">
-          <span className="export-label">Export</span>
-          <button className="btn btn-export" onClick={onExportJpeg} disabled={!hasPhotos} title="Download as JPEG (lossless quality)">JPG</button>
-          <button className="btn btn-export" onClick={onExportPng}  disabled={!hasPhotos} title="Download as PNG">PNG</button>
-          <button className="btn btn-export" onClick={onExportSvg}  disabled={!hasPhotos} title="Download as Inkscape SVG (images must be in the same folder)">SVG</button>
+          <span className="export-label">{t('export')}</span>
+          <button className="btn btn-export" onClick={onExportJpeg} disabled={!hasPhotos} title={t('exportJpgTooltip')}>{t('exportJpg')}</button>
+          <button className="btn btn-export" onClick={onExportPng}  disabled={!hasPhotos} title={t('exportPngTooltip')}>{t('exportPng')}</button>
+          <button className="btn btn-export" onClick={onExportSvg}  disabled={!hasPhotos} title={t('exportSvgTooltip')}>{t('exportSvg')}</button>
         </div>
 
         <span className="photo-count">
-          {photoCount} photo{photoCount !== 1 ? 's' : ''}
+          {t('photo', { count: photoCount })}
           {unplacedCount > 0 && (
-            <span className="unplaced-warning" title="Increase canvas size or reduce photo count">
-              {' '}· {unplacedCount} didn't fit
+            <span className="unplaced-warning" title={t('spacingWarning')}>
+              {' '}· {unplacedCount} {t('didntFit')}
             </span>
           )}
         </span>
