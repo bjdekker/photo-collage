@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type { ChangeEvent } from 'react';
-import type { CollageSettings } from '../types';
+import type { CollageSettings, DefaultLayout } from '../types';
 
 interface ControlPanelProps {
   settings: CollageSettings;
@@ -14,12 +14,18 @@ interface ControlPanelProps {
   hasPhotos: boolean;
   photoCount: number;
   unplacedCount: number;
+  layoutMode: 'generated' | 'default';
+  onLayoutModeChange: (mode: 'generated' | 'default') => void;
+  defaultLayouts: DefaultLayout[];
+  selectedDefaultLayout: string;
+  onDefaultLayoutChange: (layoutId: string) => void;
 }
 
 export default function ControlPanel({
   settings, onSettingsChange, onRegenerate, onClearAll, onPhotosAdded,
   onExportJpeg, onExportPng, onExportSvg,
   hasPhotos, photoCount, unplacedCount,
+  layoutMode, onLayoutModeChange, defaultLayouts, selectedDefaultLayout, onDefaultLayoutChange,
 }: ControlPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,40 +45,82 @@ export default function ControlPanel({
     e.target.value = '';
   };
 
+  const isDefaultMode = layoutMode === 'default';
+
   return (
     <div className="control-panel">
-      <div className="control-fields">
-        <label className="field-label">
-          <span>Width (px)</span>
-          <input type="number" className="field-input" value={settings.width}
-            onChange={handleNumberChange('width')} />
-        </label>
-
-        <label className="field-label">
-          <span>Height (px)</span>
-          <input type="number" className="field-input" value={settings.height}
-            onChange={handleNumberChange('height')} />
-        </label>
-
-        <label className="field-label">
-          <span>Margin (px)</span>
-          <input type="number" className="field-input" value={settings.margin}
-            onChange={handleNumberChange('margin')} />
-        </label>
-
-        <label className="field-label">
-          <span>Gap (px)</span>
-          <input type="number" className="field-input" value={settings.gap}
-            onChange={handleNumberChange('gap')} />
-        </label>
+      {/* Layout mode selector */}
+      <div className="layout-mode-selector">
+        <label className="mode-label">Layout Mode:</label>
+        <button
+          className={`mode-btn ${layoutMode === 'generated' ? 'mode-btn--active' : ''}`}
+          onClick={() => onLayoutModeChange('generated')}
+        >
+          Generated
+        </button>
+        <button
+          className={`mode-btn ${layoutMode === 'default' ? 'mode-btn--active' : ''}`}
+          onClick={() => onLayoutModeChange('default')}
+        >
+          Presets
+        </button>
       </div>
+
+      {/* Default layout selector - only shown in default mode */}
+      {isDefaultMode && (
+        <div className="default-layout-selector">
+          <label className="field-label">
+            <span>Layout</span>
+            <select
+              className="field-input"
+              value={selectedDefaultLayout}
+              onChange={(e) => onDefaultLayoutChange(e.target.value)}
+            >
+              {defaultLayouts.map(layout => (
+                <option key={layout.id} value={layout.id}>
+                  {layout.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      {/* Canvas settings - only shown in generated mode */}
+      {!isDefaultMode && (
+        <div className="control-fields">
+          <label className="field-label">
+            <span>Width (px)</span>
+            <input type="number" className="field-input" value={settings.width}
+              onChange={handleNumberChange('width')} />
+          </label>
+
+          <label className="field-label">
+            <span>Height (px)</span>
+            <input type="number" className="field-input" value={settings.height}
+              onChange={handleNumberChange('height')} />
+          </label>
+
+          <label className="field-label">
+            <span>Margin (px)</span>
+            <input type="number" className="field-input" value={settings.margin}
+              onChange={handleNumberChange('margin')} />
+          </label>
+
+          <label className="field-label">
+            <span>Gap (px)</span>
+            <input type="number" className="field-input" value={settings.gap}
+              onChange={handleNumberChange('gap')} />
+          </label>
+        </div>
+      )}
 
       <div className="control-actions">
         <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFileSelect} />
         <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()}>Add Photos</button>
 
-        <button className="btn btn-secondary" onClick={onRegenerate} disabled={!hasPhotos}
-          title="Generate a new random arrangement">↻ Regenerate</button>
+        <button className="btn btn-secondary" onClick={onRegenerate} disabled={!hasPhotos || isDefaultMode}
+          title={isDefaultMode ? "Regenerate not available for preset layouts" : "Generate a new random arrangement"}>↻ Regenerate</button>
 
         <button className="btn btn-danger" onClick={onClearAll} disabled={!hasPhotos}>Clear All</button>
 

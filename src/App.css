@@ -259,6 +259,16 @@
   border-radius: 3px;
 }
 
+/* ─── Preset frame placeholders ──────────────────────────────────────────── */
+
+.photo-placeholder {
+  position: absolute;
+  border-radius: 3px;
+  background: #f1f5f9;
+  border: 2px dashed #cbd5e1;
+  box-sizing: border-box;
+}
+
 .photo-box img {
   display: block;
   /* width, height, left, top are set via JS for manual pan positioning */
@@ -383,4 +393,82 @@
   font-weight: 300;
   line-height: 1;
   color: #6366f1;
+}
+
+/* ─── Layout mode selector ───────────────────────────────────────────────── */
+
+.layout-mode-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-right: 1px solid #e2e8f0;
+  margin-right: 12px;
+}
+
+.mode-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.mode-btn {
+  padding: 5px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mode-btn:hover {
+  border-color: #94a3b8;
+  color: #475569;
+}
+
+.mode-btn--active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+}
+
+/* ─── Default layout selector ────────────────────────────────────────────── */
+
+.default-layout-selector {
+  display: flex;
+  align-items: center;
+}
+
+.default-layout-selector .field-label {
+  gap: 4px;
+  margin: 0;
+}
+
+.default-layout-selector select {
+  width: 180px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+}
+
+.default-layout-selector select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  background: #fff;
+}
+
+.default-layout-selector select:hover {
+  border-color: #94a3b8;
 }

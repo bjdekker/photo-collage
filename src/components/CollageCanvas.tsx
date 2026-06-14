@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import type { DragEvent as RDE, MouseEvent as RME, CSSProperties } from 'react';
-import type { Placement, CollageSettings, PhotoOffset, PhotoNatSize } from '../types';
+import type { Placement, CollageSettings, PhotoOffset, PhotoNatSize, DefaultLayoutFrame } from '../types';
 
 export interface CollageCanvasHandle {
   getOffsets(): Map<string, PhotoOffset>;
@@ -16,6 +16,7 @@ interface Props {
   onRemovePhoto: (id: string) => void;
   onSwapPhotos: (id1: string, id2: string) => void;
   hasPhotos: boolean;
+  presetFrames?: DefaultLayoutFrame[];
 }
 
 interface PanDrag {
@@ -25,17 +26,30 @@ interface PanDrag {
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 
-function computePanInfo(fw: number, fh: number, nat: PhotoNatSize | undefined, off: PhotoOffset) {
+function computePanInfo(fw: number, fh: number, nat: PhotoNatSize | undefined, off: PhotoOffset, rotation = 0) {
   if (!nat || nat.w === 0 || nat.h === 0) return { imgW: fw, imgH: fh, imgLeft: 0, imgTop: 0, maxPX: 0, maxPY: 0 };
-  const s = Math.max(fw / nat.w, fh / nat.h);
-  const iw = nat.w * s; const ih = nat.h * s;
-  const mpx = Math.max(0, (iw - fw) / 2); const mpy = Math.max(0, (ih - fh) / 2);
-  return { imgW: iw, imgH: ih, maxPX: mpx, maxPY: mpy,
-    imgLeft: (fw - iw) / 2 + clamp(off.x, -mpx, mpx), imgTop: (fh - ih) / 2 + clamp(off.y, -mpy, mpy) };
+  // For 90°/270° rotation the natural height spans the frame width and vice versa.
+  // Swap nat dimensions so the cover scale is computed in the rotated orientation.
+  const isSwapped = rotation === 90 || rotation === 270;
+  const visNatW = isSwapped ? nat.h : nat.w;
+  const visNatH = isSwapped ? nat.w : nat.h;
+  const s = Math.max(fw / visNatW, fh / visNatH);
+  // CSS element size (pre-rotation natural dimensions × scale)
+  const cssW = nat.w * s;
+  const cssH = nat.h * s;
+  // Visual dimensions after rotation (for pan bounds)
+  const visW = visNatW * s;
+  const visH = visNatH * s;
+  const mpx = Math.max(0, (visW - fw) / 2);
+  const mpy = Math.max(0, (visH - fh) / 2);
+  // Center the element so its rotation pivot (transformOrigin: center) aligns with the frame center.
+  return { imgW: cssW, imgH: cssH, maxPX: mpx, maxPY: mpy,
+    imgLeft: (fw - cssW) / 2 + clamp(off.x, -mpx, mpx),
+    imgTop:  (fh - cssH) / 2 + clamp(off.y, -mpy, mpy) };
 }
 
 const CollageCanvas = forwardRef<CollageCanvasHandle, Props>(function CollageCanvas(
-  { placements, settings, displayScale, layoutRevision, onPhotosAdded, onRemovePhoto, onSwapPhotos, hasPhotos }, ref,
+  { placements, settings, displayScale, layoutRevision, onPhotosAdded, onRemovePhoto, onSwapPhotos, hasPhotos, presetFrames }, ref,
 ) {
   const [isDropping, setIsDropping] = useState(false);
   const dropCounter = useRef(0);
@@ -103,7 +117,7 @@ const CollageCanvas = forwardRef<CollageCanvasHandle, Props>(function CollageCan
     if (e.button !== 0) return;
     e.preventDefault();
     const off = offsets.get(pl.photo.id) ?? { x: 0, y: 0 };
-    const { maxPX, maxPY } = computePanInfo(pl.width, pl.height, natSizes.get(pl.photo.id), off);
+    const { maxPX, maxPY } = computePanInfo(pl.width, pl.height, natSizes.get(pl.photo.id), off, pl.rotation ?? 0);
     panDrag.current = { photoId: pl.photo.id, startMX: e.clientX, startMY: e.clientY, startOX: off.x, startOY: off.y, maxPX, maxPY, didMove: false };
     setDraggingId(pl.photo.id);
   };
@@ -129,17 +143,22 @@ const CollageCanvas = forwardRef<CollageCanvasHandle, Props>(function CollageCan
       <div className={`collage-canvas${isDropping ? ' collage-canvas--dragging' : ''}`}
         style={{ width, height, transform: `scale(${displayScale})`, transformOrigin: 'top center', transition: 'transform 0.2s' }}
         onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={handleDrop}>
-        {!hasPhotos && !isDropping && (
+        {!hasPhotos && !presetFrames && !isDropping && (
           <div className="empty-state">
             <div className="empty-icon">🖼️</div>
             <p className="empty-title">Drop photos here</p>
             <p className="empty-sub">JPG · PNG · GIF · WebP · or use the Add Photos button above</p>
           </div>
         )}
+        {/* Preset layout placeholder frames — always rendered behind photos */}
+        {presetFrames && presetFrames.map((frame, idx) => (
+          <div key={`placeholder-${idx}`} className="photo-placeholder"
+            style={{ left: frame.x, top: frame.y, width: frame.width, height: frame.height }} />
+        ))}
         {placements.map(pl => {
-          const { photo, x, y, width: fw, height: fh } = pl;
+          const { photo, x, y, width: fw, height: fh, rotation } = pl;
           const off = offsets.get(photo.id) ?? { x: 0, y: 0 };
-          const { imgW, imgH, imgLeft, imgTop, maxPX, maxPY } = computePanInfo(fw, fh, natSizes.get(photo.id), off);
+          const { imgW, imgH, imgLeft, imgTop, maxPX, maxPY } = computePanInfo(fw, fh, natSizes.get(photo.id), off, rotation ?? 0);
           const canPan = maxPX > 0 || maxPY > 0;
           const isPanning = draggingId === photo.id;
           const isSelected = selectedId === photo.id;
@@ -148,7 +167,8 @@ const CollageCanvas = forwardRef<CollageCanvasHandle, Props>(function CollageCan
           let cls = 'photo-box';
           if (isSelected) cls += ' photo-box--selected';
           else if (isSwapTarget) cls += ' photo-box--swap-target';
-          const imgStyle: CSSProperties = { position: 'absolute', width: imgW, height: imgH, left: imgLeft, top: imgTop, display: 'block', pointerEvents: 'none' };
+          const rotationDeg = rotation ?? 0;
+          const imgStyle: CSSProperties = { position: 'absolute', width: imgW, height: imgH, left: imgLeft, top: imgTop, display: 'block', pointerEvents: 'none', transform: `rotate(${rotationDeg}deg)`, transformOrigin: 'center' };
           return (
             <div key={photo.id} className={cls}
               style={{ left: x, top: y, width: fw, height: fh, cursor, overflow: isPanning ? 'visible' : 'hidden', zIndex: isPanning ? 15 : undefined }}

@@ -17,6 +17,7 @@ export interface Placement {
   y: number;
   width: number;
   height: number;
+  rotation: number; // 0, 90, 180, 270 (degrees clockwise)
 }
 
 export interface LayoutResult {
@@ -26,3 +27,19 @@ export interface LayoutResult {
 
 export interface PhotoOffset { x: number; y: number }
 export interface PhotoNatSize { w: number; h: number }
+
+export interface DefaultLayoutFrame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface DefaultLayout {
+  id: string;
+  name: string;
+  description: string;
+  width: number;
+  height: number;
+  frames: DefaultLayoutFrame[];
+}

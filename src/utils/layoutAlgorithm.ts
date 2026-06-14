@@ -48,7 +48,7 @@ function partition(
   if (photos.length === 0) return;
 
   if (photos.length === 1) {
-    placements.push({ photo: photos[0], x, y, width: Math.max(1, w), height: Math.max(1, h) });
+    placements.push({ photo: photos[0], x, y, width: Math.max(1, w), height: Math.max(1, h), rotation: 0 });
     return;
   }
 
@@ -109,7 +109,7 @@ function partition(
     const w2 = w - gap - w1;
     if (w1 < 1 || w2 < 1) {
       // degenerate (extreme settings) – stack photos in the same cell
-      photos.forEach(p => placements.push({ photo: p, x, y, width: w, height: h }));
+      photos.forEach(p => placements.push({ photo: p, x, y, width: w, height: h, rotation: 0 }));
       return;
     }
     partition(group1, x,            y, w1, h, gap, placements);
@@ -118,7 +118,7 @@ function partition(
     const h1 = Math.round((h - gap) * spatialRatio);
     const h2 = h - gap - h1;
     if (h1 < 1 || h2 < 1) {
-      photos.forEach(p => placements.push({ photo: p, x, y, width: w, height: h }));
+      photos.forEach(p => placements.push({ photo: p, x, y, width: w, height: h, rotation: 0 }));
       return;
     }
     partition(group1, x, y,            w, h1, gap, placements);

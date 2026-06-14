@@ -4,11 +4,14 @@ import CollageCanvas from './components/CollageCanvas';
 import type { CollageCanvasHandle } from './components/CollageCanvas';
 import { generateLayout } from './utils/layoutAlgorithm';
 import { exportAsJpeg, exportAsPng, exportAsSvg } from './utils/exportCollage';
-import type { Photo, CollageSettings, Placement } from './types';
+import { DEFAULT_LAYOUTS, getDefaultLayoutById, applyDefaultLayout, preloadPhotoSizes } from './utils/defaultLayouts';
+import type { Photo, CollageSettings, Placement, PhotoNatSize } from './types';
 import './App.css';
 
 const DEFAULT_SETTINGS: CollageSettings = { width: 900, height: 700, margin: 20, gap: 8 };
 const STORAGE_KEY = 'collage-settings';
+const LAYOUT_MODE_KEY = 'collage-layout-mode';
+const DEFAULT_LAYOUT_KEY = 'collage-default-layout';
 
 function loadSettings(): CollageSettings {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -18,6 +21,22 @@ function loadSettings(): CollageSettings {
 
 function saveSettings(s: CollageSettings) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
 
+function loadLayoutMode(): 'generated' | 'default' {
+  const stored = localStorage.getItem(LAYOUT_MODE_KEY);
+  if (stored === 'default' || stored === 'generated') return stored;
+  return 'generated';
+}
+
+function saveLayoutMode(mode: 'generated' | 'default') { localStorage.setItem(LAYOUT_MODE_KEY, mode); }
+
+function loadDefaultLayout(): string {
+  const stored = localStorage.getItem(DEFAULT_LAYOUT_KEY);
+  if (stored && DEFAULT_LAYOUTS.some(l => l.id === stored)) return stored;
+  return DEFAULT_LAYOUTS[0]?.id ?? '';
+}
+
+function saveDefaultLayout(id: string) { localStorage.setItem(DEFAULT_LAYOUT_KEY, id); }
+
 function getDisplayScale(width: number, height: number): number {
   const maxW = Math.max(600, window.innerWidth - 64);
   const maxH = Math.max(400, window.innerHeight - 300);
@@ -25,39 +44,72 @@ function getDisplayScale(width: number, height: number): number {
 }
 
 export default function App() {
-  const [settings, setSettings]       = useState<CollageSettings>(loadSettings());
-  const [displayScale, setDisplayScale] = useState<number>(getDisplayScale(settings.width, settings.height));
-  const [photos, setPhotos]           = useState<Photo[]>([]);
-  const [placements, setPlacements]   = useState<Placement[]>([]);
-  const [unplacedCount, setUnplacedCount] = useState(0);
-  const [layoutRevision, setLayoutRevision] = useState(0);
+  const [settings, setSettings]                 = useState<CollageSettings>(loadSettings());
+  const [layoutMode, setLayoutMode]             = useState<'generated' | 'default'>(loadLayoutMode());
+  const [selectedDefaultLayout, setSelectedDefaultLayout] = useState<string>(loadDefaultLayout());
+  const [displayScale, setDisplayScale]         = useState<number>(() => {
+    const mode = loadLayoutMode();
+    if (mode === 'default') {
+      const layout = getDefaultLayoutById(loadDefaultLayout());
+      if (layout) return getDisplayScale(layout.width, layout.height);
+    }
+    const s = loadSettings();
+    return getDisplayScale(s.width, s.height);
+  });
+  const [photos, setPhotos]                     = useState<Photo[]>([]);
+  const [placements, setPlacements]             = useState<Placement[]>([]);
+  const [unplacedCount, setUnplacedCount]       = useState(0);
+  const [layoutRevision, setLayoutRevision]     = useState(0);
+  const [natSizes, setNatSizes]                 = useState<Map<string, PhotoNatSize>>(new Map());
   const canvasRef = useRef<CollageCanvasHandle>(null);
+
+  // Refs so applyLayout always reads the current mode/layoutId without stale closures
+  const layoutModeRef = useRef(layoutMode);
+  const selectedDefaultLayoutRef = useRef(selectedDefaultLayout);
 
   // Update display scale when window resizes
   useEffect(() => {
-    const handleResize = () => setDisplayScale(getDisplayScale(settings.width, settings.height));
+    const handleResize = () => {
+      const newScale = getDisplayScale(
+        layoutMode === 'default' ? getDefaultLayoutById(selectedDefaultLayout)?.width ?? settings.width : settings.width,
+        layoutMode === 'default' ? getDefaultLayoutById(selectedDefaultLayout)?.height ?? settings.height : settings.height
+      );
+      setDisplayScale(newScale);
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [settings]);
+  }, [layoutMode, selectedDefaultLayout, settings]);
 
   const applyLayout = useCallback(
-    (currentPhotos: Photo[], currentSettings: CollageSettings) => {
+    (currentPhotos: Photo[], currentSettings: CollageSettings, currentNatSizes?: Map<string, PhotoNatSize>) => {
       setLayoutRevision(r => r + 1);
-      setDisplayScale(getDisplayScale(currentSettings.width, currentSettings.height));
-      if (currentPhotos.length === 0) {
-        setPlacements([]);
-        setUnplacedCount(0);
-        return;
+
+      // Always read mode/layoutId from refs so the call sees the value set in the same event handler
+      const mode = layoutModeRef.current;
+      const layoutId = selectedDefaultLayoutRef.current;
+
+      if (mode === 'default') {
+        const layout = getDefaultLayoutById(layoutId);
+        if (layout) {
+          setDisplayScale(getDisplayScale(layout.width, layout.height));
+          if (currentPhotos.length === 0) { setPlacements([]); setUnplacedCount(0); return; }
+          const pl = applyDefaultLayout(currentPhotos, layout, currentNatSizes ?? natSizes);
+          setPlacements(pl);
+          setUnplacedCount(currentPhotos.length - pl.length);
+        }
+      } else {
+        setDisplayScale(getDisplayScale(currentSettings.width, currentSettings.height));
+        if (currentPhotos.length === 0) { setPlacements([]); setUnplacedCount(0); return; }
+        const { placements: pl, unplaced } = generateLayout(
+          currentPhotos,
+          currentSettings.width, currentSettings.height,
+          currentSettings.margin, currentSettings.gap,
+        );
+        setPlacements(pl);
+        setUnplacedCount(unplaced.length);
       }
-      const { placements: pl, unplaced } = generateLayout(
-        currentPhotos,
-        currentSettings.width, currentSettings.height,
-        currentSettings.margin, currentSettings.gap,
-      );
-      setPlacements(pl);
-      setUnplacedCount(unplaced.length);
     },
-    [],
+    [natSizes],
   );
 
   const handlePhotosAdded = useCallback(
@@ -67,17 +119,56 @@ export default function App() {
         url: URL.createObjectURL(file),
         name: file.name,
       }));
+      
       setPhotos(prev => {
         const updated = [...prev, ...newPhotos];
-        applyLayout(updated, settings);
+        
+        // If in default layout mode, preload image sizes before applying layout
+        if (layoutMode === 'default') {
+          preloadPhotoSizes(updated).then(sizes => {
+            setNatSizes(sizes);
+            applyLayout(updated, settings, sizes);
+          });
+        } else {
+          applyLayout(updated, settings);
+        }
+        
         return updated;
       });
     },
-    [settings, applyLayout],
+    [settings, layoutMode, applyLayout],
   );
 
   const handleRegenerate = useCallback(() => {
     applyLayout(photos, settings);
+  }, [photos, settings, applyLayout]);
+
+  const handleLayoutModeChange = useCallback((mode: 'generated' | 'default') => {
+    layoutModeRef.current = mode; // update ref BEFORE applyLayout reads it
+    setLayoutMode(mode);
+    saveLayoutMode(mode);
+    if (mode === 'default' && photos.length > 0) {
+      preloadPhotoSizes(photos).then(sizes => {
+        setNatSizes(sizes);
+        applyLayout(photos, settings, sizes);
+      });
+    } else {
+      applyLayout(photos, settings);
+    }
+  }, [photos, settings, applyLayout]);
+
+  const handleDefaultLayoutChange = useCallback((layoutId: string) => {
+    selectedDefaultLayoutRef.current = layoutId; // update ref BEFORE applyLayout reads it
+    setSelectedDefaultLayout(layoutId);
+    saveDefaultLayout(layoutId);
+    if (photos.length > 0) {
+      preloadPhotoSizes(photos).then(sizes => {
+        setNatSizes(sizes);
+        applyLayout(photos, settings, sizes);
+      });
+    } else {
+      applyLayout(photos, settings);
+    }
   }, [photos, settings, applyLayout]);
 
   const handleSettingsChange = useCallback(
@@ -131,18 +222,36 @@ export default function App() {
 
   const handleExportJpeg = useCallback(() => {
     if (!canvasRef.current || placements.length === 0) return;
-    exportAsJpeg(placements, settings, canvasRef.current.getOffsets(), canvasRef.current.getNatSizes()).catch(console.error);
-  }, [placements, settings]);
+    const currentSettings = layoutMode === 'default'
+      ? { ...(getDefaultLayoutById(selectedDefaultLayout) ?? DEFAULT_SETTINGS), margin: 0, gap: 0 } as CollageSettings
+      : settings;
+    exportAsJpeg(placements, currentSettings, canvasRef.current.getOffsets(), canvasRef.current.getNatSizes()).catch(console.error);
+  }, [placements, settings, layoutMode, selectedDefaultLayout]);
 
   const handleExportPng = useCallback(() => {
     if (!canvasRef.current || placements.length === 0) return;
-    exportAsPng(placements, settings, canvasRef.current.getOffsets(), canvasRef.current.getNatSizes()).catch(console.error);
-  }, [placements, settings]);
+    const currentSettings = layoutMode === 'default'
+      ? { ...(getDefaultLayoutById(selectedDefaultLayout) ?? DEFAULT_SETTINGS), margin: 0, gap: 0 } as CollageSettings
+      : settings;
+    exportAsPng(placements, currentSettings, canvasRef.current.getOffsets(), canvasRef.current.getNatSizes()).catch(console.error);
+  }, [placements, settings, layoutMode, selectedDefaultLayout]);
 
   const handleExportSvg = useCallback(() => {
     if (!canvasRef.current || placements.length === 0) return;
-    exportAsSvg(placements, settings, canvasRef.current.getOffsets(), canvasRef.current.getNatSizes());
-  }, [placements, settings]);
+    const currentSettings = layoutMode === 'default'
+      ? { ...(getDefaultLayoutById(selectedDefaultLayout) ?? DEFAULT_SETTINGS), margin: 0, gap: 0 } as CollageSettings
+      : settings;
+    exportAsSvg(placements, currentSettings, canvasRef.current.getOffsets(), canvasRef.current.getNatSizes());
+  }, [placements, settings, layoutMode, selectedDefaultLayout]);
+
+  // Update natSizes when images load in canvas (for generated layouts)
+  // In default layout mode, natSizes are preloaded in callbacks
+  useEffect(() => {
+    if (canvasRef.current && layoutMode === 'generated') {
+      const sizes = canvasRef.current.getNatSizes();
+      setNatSizes(sizes);
+    }
+  }, [layoutMode, layoutRevision]);
 
   return (
     <div className="app">
@@ -150,13 +259,37 @@ export default function App() {
         <h1 className="app-title">Photo Collage Generator</h1>
       </header>
 
-      <ControlPanel settings={settings} onSettingsChange={handleSettingsChange}
-        onRegenerate={handleRegenerate} onClearAll={handleClearAll} onPhotosAdded={handlePhotosAdded}
-        onExportJpeg={handleExportJpeg} onExportPng={handleExportPng} onExportSvg={handleExportSvg}
-        hasPhotos={photos.length > 0} photoCount={photos.length} unplacedCount={unplacedCount} />
+      <ControlPanel
+        settings={settings}
+        onSettingsChange={handleSettingsChange}
+        onRegenerate={handleRegenerate}
+        onClearAll={handleClearAll}
+        onPhotosAdded={handlePhotosAdded}
+        onExportJpeg={handleExportJpeg}
+        onExportPng={handleExportPng}
+        onExportSvg={handleExportSvg}
+        hasPhotos={photos.length > 0}
+        photoCount={photos.length}
+        unplacedCount={unplacedCount}
+        layoutMode={layoutMode}
+        onLayoutModeChange={handleLayoutModeChange}
+        defaultLayouts={DEFAULT_LAYOUTS}
+        selectedDefaultLayout={selectedDefaultLayout}
+        onDefaultLayoutChange={handleDefaultLayoutChange}
+      />
 
-      <CollageCanvas ref={canvasRef} placements={placements} settings={settings} displayScale={displayScale} layoutRevision={layoutRevision} onPhotosAdded={handlePhotosAdded}
-        onRemovePhoto={handleRemovePhoto} onSwapPhotos={handleSwapPhotos} hasPhotos={photos.length > 0} />
+      <CollageCanvas
+        ref={canvasRef}
+        placements={placements}
+        settings={layoutMode === 'default' ? { ...(getDefaultLayoutById(selectedDefaultLayout) ?? DEFAULT_SETTINGS), margin: 0, gap: 0 } as CollageSettings : settings}
+        displayScale={displayScale}
+        layoutRevision={layoutRevision}
+        onPhotosAdded={handlePhotosAdded}
+        onRemovePhoto={handleRemovePhoto}
+        onSwapPhotos={handleSwapPhotos}
+        hasPhotos={photos.length > 0}
+        presetFrames={layoutMode === 'default' ? getDefaultLayoutById(selectedDefaultLayout)?.frames : undefined}
+      />
     </div>
   );
 }

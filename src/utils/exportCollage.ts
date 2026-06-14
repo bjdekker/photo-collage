@@ -4,15 +4,25 @@ import type { Placement, CollageSettings, PhotoOffset, PhotoNatSize } from '../t
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 
-/** Compute absolute image position & size within a frame, given the pan offset. */
-function panInfo(fw: number, fh: number, nat: PhotoNatSize | undefined, off: PhotoOffset) {
-  if (!nat || nat.w === 0 || nat.h === 0) return { imgW: fw, imgH: fh, imgLeft: 0, imgTop: 0, s: 1 };
-  const s = Math.max(fw / nat.w, fh / nat.h);
-  const iw = nat.w * s; const ih = nat.h * s;
-  const mpx = Math.max(0, (iw - fw) / 2); const mpy = Math.max(0, (ih - fh) / 2);
-  return { s, imgW: iw, imgH: ih,
-    imgLeft: (fw - iw) / 2 + clamp(off.x, -mpx, mpx),
-    imgTop:  (fh - ih) / 2 + clamp(off.y, -mpy, mpy) };
+/**
+ * Compute the CSS-space image position & size within a frame, matching CollageCanvas logic.
+ * For 90°/270° rotation the natural dimensions are swapped before computing the cover scale.
+ */
+function panInfo(fw: number, fh: number, nat: PhotoNatSize | undefined, off: PhotoOffset, rotation = 0) {
+  if (!nat || nat.w === 0 || nat.h === 0) return { imgW: fw, imgH: fh, imgLeft: 0, imgTop: 0 };
+  const isSwapped = rotation === 90 || rotation === 270;
+  const visNatW = isSwapped ? nat.h : nat.w;
+  const visNatH = isSwapped ? nat.w : nat.h;
+  const s = Math.max(fw / visNatW, fh / visNatH);
+  const cssW = nat.w * s;
+  const cssH = nat.h * s;
+  const visW = visNatW * s;
+  const visH = visNatH * s;
+  const mpx = Math.max(0, (visW - fw) / 2);
+  const mpy = Math.max(0, (visH - fh) / 2);
+  return { imgW: cssW, imgH: cssH,
+    imgLeft: (fw - cssW) / 2 + clamp(off.x, -mpx, mpx),
+    imgTop:  (fh - cssH) / 2 + clamp(off.y, -mpy, mpy) };
 }
 
 function loadImg(url: string): Promise<HTMLImageElement> {
@@ -63,22 +73,18 @@ async function buildCanvas(
   ctx.fillRect(0, 0, settings.width, settings.height);
 
   for (const pl of placements) {
-    const { photo, x, y, width: fw, height: fh } = pl;
+    const { photo, x, y, width: fw, height: fh, rotation } = pl;
     const img = imgMap.get(photo.url)!;
     const nat = natSizes.get(photo.id) ?? { w: img.naturalWidth, h: img.naturalHeight };
     const off = offsets.get(photo.id) ?? { x: 0, y: 0 };
-    const { imgLeft, imgTop, s } = panInfo(fw, fh, nat, off);
-
-    // Source rect in natural-pixel space: the frame-visible slice of the image
-    const sx = -imgLeft / s;
-    const sy = -imgTop / s;
-    const sw = fw / s;
-    const sh = fh / s;
+    const rotDeg = rotation ?? 0;
+    const { imgLeft, imgTop, imgW, imgH } = panInfo(fw, fh, nat, off, rotDeg);
 
     ctx.save();
-    ctx.beginPath();
-    // Rounded-rect clip (3 px radius, matching the CSS border-radius)
+
+    // Clip to the frame (rounded rect) — always in unrotated canvas space.
     const r = 3;
+    ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.arcTo(x + fw, y,      x + fw, y + fh, r);
     ctx.arcTo(x + fw, y + fh, x,      y + fh, r);
@@ -86,7 +92,22 @@ async function buildCanvas(
     ctx.arcTo(x,      y,      x + fw, y,      r);
     ctx.closePath();
     ctx.clip();
-    ctx.drawImage(img, sx, sy, sw, sh, x, y, fw, fh);
+
+    // Rotate around the image element's centre (= frame centre when pan offset is 0).
+    // This exactly mirrors the CSS `transform: rotate(Xdeg); transform-origin: center`
+    // applied to the <img> element inside the frame div.
+    if (rotDeg !== 0) {
+      const pivotX = x + imgLeft + imgW / 2;
+      const pivotY = y + imgTop  + imgH / 2;
+      ctx.translate(pivotX, pivotY);
+      ctx.rotate((rotDeg * Math.PI) / 180);
+      ctx.translate(-pivotX, -pivotY);
+    }
+
+    // Draw the full image at its computed CSS position / CSS size.
+    // The clip above ensures only the frame area is visible.
+    ctx.drawImage(img, x + imgLeft, y + imgTop, imgW, imgH);
+
     ctx.restore();
   }
 
@@ -151,21 +172,30 @@ export function exportAsSvg(
   lines.push(`  <rect width="${width}" height="${height}" fill="#ffffff"/>`);
 
   for (const pl of placements) {
-    const { photo, x, y, width: fw, height: fh } = pl;
+    const { photo, x, y, width: fw, height: fh, rotation } = pl;
     const off = offsets.get(photo.id) ?? { x: 0, y: 0 };
-    const { imgLeft, imgTop, imgW, imgH } = panInfo(fw, fh, natSizes.get(photo.id), off);
+    const rotDeg = rotation ?? 0;
+    const { imgLeft, imgTop, imgW, imgH } = panInfo(fw, fh, natSizes.get(photo.id), off, rotDeg);
 
-    // The <image> is positioned at the full rendered size (including the
-    // panned/cropped region) and the clipPath reveals only the frame area.
+    // Image is positioned at its CSS-space coordinates (pre-rotation).
     const imgX = fp(x + imgLeft);
     const imgY = fp(y + imgTop);
-    const href  = xmlAttr(encodeFilename(photo.name));
+    const href = xmlAttr(encodeFilename(photo.name));
 
-    lines.push(`  <image`);
-    lines.push(`     href="${href}"`);
-    lines.push(`     x="${imgX}" y="${imgY}" width="${fp(imgW)}" height="${fp(imgH)}"`);
-    lines.push(`     clip-path="url(#clip-${photo.id})"`);
-    lines.push(`     preserveAspectRatio="none"/>`);
+    // Rotation pivot = centre of the image element (= frame centre when pan offset is 0),
+    // matching the CSS transform-origin: center behaviour.
+    const pivotX = fp(x + imgLeft + imgW / 2);
+    const pivotY = fp(y + imgTop  + imgH / 2);
+    const transformAttr = rotDeg !== 0 ? ` transform="rotate(${rotDeg} ${pivotX} ${pivotY})"` : '';
+
+    // Wrap in a <g> so the clip-path is applied to the already-rotated image.
+    // (Applying clip-path directly on a transformed <image> clips in the wrong space.)
+    lines.push(`  <g clip-path="url(#clip-${photo.id})">`);
+    lines.push(`    <image`);
+    lines.push(`       href="${href}"`);
+    lines.push(`       x="${imgX}" y="${imgY}" width="${fp(imgW)}" height="${fp(imgH)}"${transformAttr}`);
+    lines.push(`       preserveAspectRatio="none"/>`);
+    lines.push(`  </g>`);
   }
 
   lines.push(`</svg>`);
