@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import type { DragEvent as RDE, MouseEvent as RME, CSSProperties } from 'react';
+import type { DragEvent as RDE, PointerEvent as RPE, CSSProperties } from 'react';
 import type { Placement, CollageSettings, PhotoOffset, PhotoNatSize, DefaultLayoutFrame } from '../types';
 
 export interface CollageCanvasHandle {
@@ -82,9 +82,9 @@ const CollageCanvas = forwardRef<CollageCanvasHandle, Props>(function CollageCan
     });
   }, [placements]);
 
-  // Global mouse handlers for pan dragging
+  // Global pointer handlers for pan dragging (works for mouse, touch, and pen)
   useEffect(() => {
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       if (!panDrag.current) return;
       const d = panDrag.current;
       if (!d.didMove && (Math.abs(e.clientX - d.startMX) > 4 || Math.abs(e.clientY - d.startMY) > 4)) d.didMove = true;
@@ -108,13 +108,13 @@ const CollageCanvas = forwardRef<CollageCanvasHandle, Props>(function CollageCan
         else { selectedIdRef.current = null; setSelectedId(null); onSwapRef.current(cur, photoId); }
       }
     };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
   }, []);
 
-  const handlePhotoMouseDown = (e: RME<HTMLDivElement>, pl: Placement) => {
-    if (e.button !== 0) return;
+  const handlePhotoPointerDown = (e: RPE<HTMLDivElement>, pl: Placement) => {
+    if ('button' in e && e.button !== 0) return;
     e.preventDefault();
     const off = offsets.get(pl.photo.id) ?? { x: 0, y: 0 };
     const { maxPX, maxPY } = computePanInfo(pl.width, pl.height, natSizes.get(pl.photo.id), off, pl.rotation ?? 0);
@@ -172,7 +172,7 @@ const CollageCanvas = forwardRef<CollageCanvasHandle, Props>(function CollageCan
           return (
             <div key={photo.id} className={cls}
               style={{ left: x, top: y, width: fw, height: fh, cursor, overflow: isPanning ? 'visible' : 'hidden', zIndex: isPanning ? 15 : undefined }}
-              onMouseDown={e => handlePhotoMouseDown(e, pl)}>
+              onPointerDown={e => handlePhotoPointerDown(e, pl)}>
 
               {/* Ghost: full photo at 50% opacity – reveals cropped areas during pan */}
               {isPanning && canPan && (
@@ -202,7 +202,7 @@ const CollageCanvas = forwardRef<CollageCanvasHandle, Props>(function CollageCan
               )}
 
               <button className="remove-btn" title={`Remove ${photo.name}`}
-                onMouseDown={e => e.stopPropagation()} onClick={() => onRemovePhoto(photo.id)}>×</button>
+                onPointerDown={e => e.stopPropagation()} onClick={() => onRemovePhoto(photo.id)}>×</button>
             </div>
           );
         })}
